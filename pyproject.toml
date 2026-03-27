@@ -1,0 +1,40 @@
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "sqlcsv-exporter"
+version = "1.0.0"
+description = "CLI utility to stream SQL Server query results into CSV files."
+authors = ["Your Team <team@example.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{ include = "sqlcsv_exporter", from = "src" }]
+keywords = ["sql-server", "csv", "cli", "export", "pyodbc"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Database",
+  "Topic :: Utilities",
+]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+pyodbc = ">=5.0.1"
+rich = ">=13.7.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.0.0"
+
+[tool.poetry.scripts]
+sqlcsv-exporter = "sqlcsv_exporter.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
