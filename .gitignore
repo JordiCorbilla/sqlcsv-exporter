@@ -205,3 +205,8 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+blogpost.md
+exports/stock_metrics_slow_test.csv
+queries/stock_metrics_top_1000.sql
+exports/stock_metrics_top_1000.csv
+queries/stock_metrics_slow_test.sql
