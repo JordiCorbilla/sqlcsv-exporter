@@ -5,7 +5,7 @@ from pathlib import Path
 from rich.console import Console
 
 from sqlcsv_exporter.config import ExportConfig
-from sqlcsv_exporter.exporter import execute_query_to_csv, write_rows_to_csv
+from sqlcsv_exporter.exporter import ExportResult, execute_query_to_csv, render_export_report, write_rows_to_csv
 
 
 class FakeCursor:
@@ -88,6 +88,7 @@ def test_execute_query_to_csv_streams_results(monkeypatch: object, tmp_path: Pat
 
     assert result.row_count == 3
     assert result.column_count == 2
+    assert result.columns == ("id", "name")
     assert result.date_parameter_replaced is True
     assert "2026-03-26" in (cursor.executed_sql or "")
     assert cursor.closed is True
@@ -120,3 +121,32 @@ def test_execute_query_to_csv_sets_connection_timeout_when_cursor_lacks_timeout(
     execute_query_to_csv(config, console=Console(file=None, stderr=True, color_system=None))
 
     assert connection.timeout == 123
+
+
+def test_render_export_report_includes_panel_fields() -> None:
+    console = Console(record=True, width=120, color_system=None)
+    config = ExportConfig(
+        sql_file=Path("query.sql"),
+        output_csv=Path("output.csv"),
+        server="sql01",
+        database="Reporting",
+        as_of_date="2026-03-26",
+    )
+    result = ExportResult(
+        output_csv=Path("output.csv"),
+        row_count=42,
+        column_count=2,
+        columns=("id", "name"),
+        file_size_bytes=4096,
+        duration_seconds=2.51,
+        date_parameter_replaced=False,
+    )
+
+    render_export_report(console, config, result)
+    output = console.export_text()
+
+    assert "sqlcsv-exporter v1.0.1" in output
+    assert "rows_exported" in output
+    assert "42" in output
+    assert "Column" in output
+    assert "name" in output

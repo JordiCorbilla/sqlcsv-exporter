@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "sqlcsv-exporter"
-version = "1.0.0"
+version = "1.0.1"
 description = "CLI utility to stream SQL Server query results into CSV files."
 authors = ["Your Team <team@example.com>"]
 license = "MIT"

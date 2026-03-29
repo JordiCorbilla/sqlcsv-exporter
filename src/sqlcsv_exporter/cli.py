@@ -102,7 +102,7 @@ def build_config(args: argparse.Namespace) -> ExportConfig:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    console = Console(stderr=True)
+    console = Console(stderr=True, legacy_windows=False)
     parser = build_parser()
 
     try:

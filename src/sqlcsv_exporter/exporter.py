@@ -7,7 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable, Iterator, Sequence
 
+from rich import box
 from rich.console import Console
+from rich.panel import Panel
 from rich.progress import (
     BarColumn,
     Progress,
@@ -17,7 +19,9 @@ from rich.progress import (
     TimeElapsedColumn,
 )
 from rich.table import Table
+from rich.text import Text
 
+from sqlcsv_exporter import __version__
 from sqlcsv_exporter.config import ExportConfig
 from sqlcsv_exporter.connection import open_connection
 from sqlcsv_exporter.sql_rewriter import read_sql_file, replace_declared_date_parameter
@@ -34,6 +38,7 @@ class ExportResult:
     output_csv: Path
     row_count: int
     column_count: int
+    columns: tuple[str, ...]
     file_size_bytes: int
     duration_seconds: float
     date_parameter_replaced: bool
@@ -84,18 +89,55 @@ def _format_size(num_bytes: int) -> str:
     return f"{num_bytes / (1024 * 1024):.1f} MiB"
 
 
-def _render_run_summary(console: Console, config: ExportConfig, date_replaced: bool) -> None:
-    summary = Table.grid(padding=(0, 2))
-    summary.add_column(style="cyan")
+def _format_duration(duration_seconds: float) -> str:
+    return f"{duration_seconds:.2f}s"
+
+
+def render_export_report(console: Console, config: ExportConfig, result: ExportResult) -> None:
+    summary = Table.grid(expand=True, padding=(0, 2))
+    summary.add_column(style="bold cyan", no_wrap=True, width=15)
     summary.add_column()
-    summary.add_row("SQL file", str(config.sql_file))
-    summary.add_row("Output", str(config.output_csv))
-    summary.add_row("Server", config.server)
-    summary.add_row("Database", config.database)
-    summary.add_row("As-of date", config.as_of_date)
-    summary.add_row("Chunk size", f"{config.chunk_size:,}")
-    summary.add_row("Date rewritten", "yes" if date_replaced else "no")
-    console.print(summary)
+    summary.add_row("sql", str(config.sql_file))
+    summary.add_row("server", config.server)
+    summary.add_row("database", config.database)
+    summary.add_row("delimiter", repr(config.delimiter))
+    summary.add_row("header", "yes" if config.include_header else "no")
+    summary.add_row("date_rewrite", "yes" if result.date_parameter_replaced else "no")
+    summary.add_row("chunk_size", f"{config.chunk_size:,}")
+    summary.add_row("rows_exported", f"{result.row_count:,}")
+    summary.add_row("column_count", f"{result.column_count:,}")
+    summary.add_row("file_size", _format_size(result.file_size_bytes))
+    summary.add_row("elapsed", _format_duration(result.duration_seconds))
+    summary.add_row("output", str(result.output_csv))
+
+    columns_table = Table(
+        box=box.SIMPLE_HEAVY,
+        expand=True,
+        show_header=True,
+        header_style="bold",
+        safe_box=False,
+    )
+    columns_table.add_column("#", justify="right", style="dim", width=3)
+    columns_table.add_column("Column", style="bold")
+    for index, column_name in enumerate(result.columns, start=1):
+        columns_table.add_row(str(index), column_name)
+
+    panel_table = Table.grid(expand=True, padding=(0, 0))
+    panel_table.add_row(summary)
+    if result.columns:
+        panel_table.add_row(Text(""))
+        panel_table.add_row(columns_table)
+
+    console.print(
+        Panel(
+            panel_table,
+            title=f" sqlcsv-exporter v{__version__} ",
+            border_style="cyan",
+            box=box.ROUNDED,
+            safe_box=False,
+            expand=True,
+        )
+    )
 
 
 def _apply_query_timeout(connection: object, cursor: object, timeout_seconds: int) -> None:
@@ -118,8 +160,6 @@ def execute_query_to_csv(config: ExportConfig, *, console: Console | None = None
         parameter_name=config.date_parameter_name,
     )
 
-    _render_run_summary(console, config, date_replaced)
-
     started_at = time.perf_counter()
     connection = None
     cursor = None
@@ -140,7 +180,6 @@ def execute_query_to_csv(config: ExportConfig, *, console: Console | None = None
             )
 
         columns = [column[0] or f"column_{index + 1}" for index, column in enumerate(cursor.description)]
-        console.print(f"Columns detected: [bold]{len(columns)}[/bold]")
 
         progress = Progress(
             SpinnerColumn(),
@@ -184,18 +223,17 @@ def execute_query_to_csv(config: ExportConfig, *, console: Console | None = None
             )
 
         duration_seconds = time.perf_counter() - started_at
-        console.print(
-            f"Export complete: [bold]{row_count:,}[/bold] rows, "
-            f"[bold]{len(columns)}[/bold] columns, {_format_size(file_size_bytes)} written."
-        )
-        return ExportResult(
+        result = ExportResult(
             output_csv=config.output_csv,
             row_count=row_count,
             column_count=len(columns),
+            columns=tuple(columns),
             file_size_bytes=file_size_bytes,
             duration_seconds=duration_seconds,
             date_parameter_replaced=date_replaced,
         )
+        render_export_report(console, config, result)
+        return result
     finally:
         if cursor is not None:
             with suppress(Exception):
