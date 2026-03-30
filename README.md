@@ -13,42 +13,81 @@
 
 ## Install
 
+For local development without Poetry:
+
+```powershell
+python -m pip install -e .
+```
+
+If you want to run directly from the repo without installing the package, use the `src` directory on `PYTHONPATH`:
+
+```powershell
+$env:PYTHONPATH = "src"
+python -m sqlcsv_exporter --help
+```
+
+Poetry still works if you prefer it:
+
 ```bash
 poetry install
 ```
 
 ## Run
 
-```bash
-poetry run sqlcsv-exporter \
-  --sql ./queries/report.sql \
-  --output ./exports/report.csv \
-  --server my-sql-server \
+If you installed the package with `pip install -e .`:
+
+```powershell
+python -m sqlcsv_exporter `
+  --sql .\queries\report.sql `
+  --output .\exports\report.csv `
+  --server my-sql-server `
+  --database Reporting
+```
+
+From the repo without installing:
+
+```powershell
+$env:PYTHONPATH = "src"
+python -m sqlcsv_exporter `
+  --sql .\queries\report.sql `
+  --output .\exports\report.csv `
+  --server my-sql-server `
   --database Reporting
 ```
 
 With SQL authentication:
 
-```bash
-poetry run sqlcsv-exporter \
-  --sql ./queries/report.sql \
-  --output ./exports/report.csv \
-  --server my-sql-server \
-  --database Reporting \
-  --sql-auth \
-  --username reporting_user \
+```powershell
+python -m sqlcsv_exporter `
+  --sql .\queries\report.sql `
+  --output .\exports\report.csv `
+  --server my-sql-server `
+  --database Reporting `
+  --sql-auth `
+  --username reporting_user `
   --password secret
 ```
 
 Override the as-of date used in a declared `@InAsOfDate` variable:
 
-```bash
-poetry run sqlcsv-exporter \
-  --sql ./queries/report.sql \
-  --output ./exports/report.csv \
-  --server my-sql-server \
-  --database Reporting \
+```powershell
+python -m sqlcsv_exporter `
+  --sql .\queries\report.sql `
+  --output .\exports\report.csv `
+  --server my-sql-server `
+  --database Reporting `
   --date 2026-03-26
+```
+
+Using the real test query in this repo:
+
+```powershell
+$env:PYTHONPATH = "src"
+python -m sqlcsv_exporter `
+  --sql .\queries\stock_metrics_top_1000.sql `
+  --output .\exports\stock_metrics_top_1000.csv `
+  --server "DESKTOP-TTUSQLJ\SQLEXPRESS" `
+  --database QuantDevTest
 ```
 
 ## Publish
